@@ -1,0 +1,12 @@
+{
+  "project_name": "Rust OS",
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "checkOnSave": {
+          "allTargets": false,
+        },
+      },
+    },
+  },
+}
