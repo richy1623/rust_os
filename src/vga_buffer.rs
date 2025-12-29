@@ -1,4 +1,13 @@
 use core::fmt;
+use spin::Lazy;
+use spin::Mutex;
+
+pub static VGA_WRITER: Lazy<Mutex<VgaWriter>> = Lazy::new(|| {
+    Mutex::new(VgaWriter::new(ColorCode::new(
+        Color::LightBlue,
+        Color::Black,
+    )))
+});
 
 /// The standard color palette in VGA text mode.
 #[allow(dead_code)]
@@ -30,7 +39,7 @@ pub struct ColorCode(u8);
 
 impl ColorCode {
     fn new(foreground: Color, background: Color) -> ColorCode {
-        Self((foreground as u8) << 4 | (background as u8))
+        ColorCode((background as u8) << 4 | (foreground as u8))
     }
 }
 
@@ -45,24 +54,25 @@ pub struct VgaCharacter {
 const BUFFER_HEIGHT: usize = 25;
 /// The width of the text buffer (normally 80 columns).
 const BUFFER_WIDTH: usize = 80;
-const VGA_BUFFER_ADDRESS: usize = 0xb8000;
+const VGA_BUFFER_ADDRESS: u32 = 0xb8000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
 struct VgaBuffer {
-    pub chars: [[VgaCharacter; BUFFER_HEIGHT]; BUFFER_WIDTH],
+    pub chars: [[VgaCharacter; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
-struct VgaWriter {
-    buffer: VgaBuffer,
+pub struct VgaWriter {
+    buffer: &'static mut VgaBuffer,
     column: usize,
     color_code: ColorCode,
 }
 
+#[allow(dead_code)]
 impl VgaWriter {
     pub fn new(color_code: ColorCode) -> Self {
         Self {
-            buffer: unsafe { core::ptr::read_volatile(VGA_BUFFER_ADDRESS as *mut VgaBuffer) },
+            buffer: unsafe { &mut *(VGA_BUFFER_ADDRESS as *mut VgaBuffer) },
             color_code,
             column: 0,
         }
@@ -71,12 +81,13 @@ impl VgaWriter {
     pub fn write_byte(&mut self, ascii_character: u8) {
         if ascii_character == b'\n' {
             self.new_line();
+            return;
         }
 
         let row: usize = BUFFER_HEIGHT - 1;
         unsafe {
             core::ptr::write_volatile(
-                &mut self.buffer.chars[self.column][row],
+                &mut self.buffer.chars[row][self.column] as *mut VgaCharacter,
                 VgaCharacter {
                     ascii_character,
                     character_color: self.color_code,
@@ -91,15 +102,16 @@ impl VgaWriter {
             for column in 0..BUFFER_WIDTH {
                 unsafe {
                     let character_to_move: VgaCharacter = core::ptr::read_volatile(
-                        &mut self.buffer.chars[column][row] as *const VgaCharacter,
+                        &mut self.buffer.chars[row][column] as *const VgaCharacter,
                     );
                     core::ptr::write_volatile(
-                        &mut self.buffer.chars[column][row - 1],
+                        &mut self.buffer.chars[row - 1][column],
                         character_to_move,
                     );
                 }
             }
         }
+        self.clear_last_line();
     }
 
     pub fn write_string(&mut self, string: &str) {
@@ -115,7 +127,7 @@ impl VgaWriter {
         for column in 0..BUFFER_WIDTH {
             unsafe {
                 core::ptr::write_volatile(
-                    &mut self.buffer.chars[column][line_number],
+                    &mut self.buffer.chars[line_number][column],
                     VgaCharacter {
                         ascii_character: b' ',
                         character_color: self.color_code,
@@ -126,9 +138,12 @@ impl VgaWriter {
     }
 
     pub fn clear(&mut self) {
-        for row in 0..BUFFER_HEIGHT {
+        for row in (0..BUFFER_HEIGHT).into_iter().rev() {
             self.clear_line(row);
         }
+    }
+    pub fn clear_last_line(&mut self) {
+        self.clear_line(BUFFER_HEIGHT - 1);
     }
 }
 
@@ -139,6 +154,22 @@ impl fmt::Write for VgaWriter {
     }
 }
 
-// * Write byte
-// * Write string
-// * Write newline
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => {{
+        $crate::vga_buffer::_print(format_args!($($arg)*));
+    }};
+}
+
+#[macro_export]
+macro_rules! println {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+}
+
+/// Prints the given formatted string to the VGA text buffer through the global `VGA_WRITER` instance.
+#[doc(hidden)]
+pub fn _print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    VGA_WRITER.lock().write_fmt(args).unwrap();
+}
