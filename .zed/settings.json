@@ -3,8 +3,12 @@
   "lsp": {
     "rust-analyzer": {
       "initialization_options": {
-        "checkOnSave": {
+        "cargo": {
+          "setTest": false, // This makes #[cfg(test)] code active for the LSP
+        },
+        "check": {
           "allTargets": false,
+          "extraArgs": ["--bin", "rust_os", "--tests"],
         },
       },
     },

@@ -2,6 +2,7 @@ use core::fmt;
 use spin::Lazy;
 use spin::Mutex;
 
+#[allow(dead_code)]
 pub static VGA_WRITER: Lazy<Mutex<VgaWriter>> = Lazy::new(|| {
     Mutex::new(VgaWriter::new(ColorCode::new(
         Color::LightBlue,
@@ -84,13 +85,17 @@ impl VgaWriter {
             return;
         }
 
+        if self.column >= BUFFER_WIDTH {
+            self.new_line();
+        }
+
         let row: usize = BUFFER_HEIGHT - 1;
         unsafe {
             core::ptr::write_volatile(
                 &mut self.buffer.chars[row][self.column] as *mut VgaCharacter,
                 VgaCharacter {
                     ascii_character,
-                    character_color: self.color_code,
+                    character_color: self.color_code.clone(),
                 },
             );
         }
@@ -111,6 +116,7 @@ impl VgaWriter {
                 }
             }
         }
+        self.column = 0;
         self.clear_last_line();
     }
 
@@ -124,17 +130,19 @@ impl VgaWriter {
     }
 
     pub fn clear_line(&mut self, line_number: usize) {
+        let color = self.color_code.clone();
         for column in 0..BUFFER_WIDTH {
             unsafe {
                 core::ptr::write_volatile(
                     &mut self.buffer.chars[line_number][column],
                     VgaCharacter {
                         ascii_character: b' ',
-                        character_color: self.color_code,
+                        character_color: color,
                     },
                 );
             }
         }
+        self.column = 0;
     }
 
     pub fn clear(&mut self) {
@@ -172,4 +180,73 @@ macro_rules! println {
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     VGA_WRITER.lock().write_fmt(args).unwrap();
+}
+
+#[cfg(test)]
+mod test {
+    use crate::vga_buffer::{
+        BUFFER_HEIGHT, BUFFER_WIDTH, VGA_BUFFER_ADDRESS, VGA_WRITER, VgaBuffer,
+    };
+
+    #[test_case]
+    fn test_vga_write() {
+        VGA_WRITER.lock().clear();
+        let string_to_write = "Hello World!";
+        VGA_WRITER.lock().write_string(string_to_write);
+        let buffer: VgaBuffer =
+            unsafe { core::ptr::read_volatile(VGA_BUFFER_ADDRESS as *const VgaBuffer) };
+
+        for (i, expected) in string_to_write.as_bytes().iter().enumerate() {
+            let actual = buffer.chars[BUFFER_HEIGHT - 1][i].ascii_character as char;
+            assert_eq!(*expected as char, actual);
+        }
+    }
+
+    #[test_case]
+    fn test_vga_write_new_line() {
+        VGA_WRITER.lock().clear();
+        let string_to_write = "HelloWorld\n!";
+        VGA_WRITER.lock().write_string(string_to_write);
+        let buffer: VgaBuffer =
+            unsafe { core::ptr::read_volatile(VGA_BUFFER_ADDRESS as *const VgaBuffer) };
+
+        for (i, expected) in "HelloWorld".as_bytes().iter().enumerate() {
+            let actual = buffer.chars[BUFFER_HEIGHT - 2][i].ascii_character as char;
+            assert_eq!(*expected as char, actual);
+        }
+        for (i, expected) in "!".as_bytes().iter().enumerate() {
+            let actual = buffer.chars[BUFFER_HEIGHT - 1][i].ascii_character as char;
+            assert_eq!(*expected as char, actual);
+        }
+    }
+
+    #[test_case]
+    fn test_vga_write_long_line() {
+        VGA_WRITER.lock().clear();
+        let string_to_write: [u8; BUFFER_WIDTH * 2] = [b'x'; BUFFER_WIDTH * 2];
+        for char in string_to_write {
+            VGA_WRITER.lock().write_byte(char);
+        }
+        let buffer: VgaBuffer =
+            unsafe { core::ptr::read_volatile(VGA_BUFFER_ADDRESS as *const VgaBuffer) };
+
+        for (i, expected) in string_to_write[0..BUFFER_WIDTH].iter().enumerate() {
+            let actual = buffer.chars[BUFFER_HEIGHT - 2][i].ascii_character as char;
+            assert_eq!(*expected as char, actual);
+        }
+
+        for (i, expected) in string_to_write[0..BUFFER_WIDTH].iter().enumerate() {
+            let actual = buffer.chars[BUFFER_HEIGHT - 1][i].ascii_character as char;
+            assert_eq!(
+                *expected as char,
+                actual,
+                "Failed for index [{}][{}]",
+                BUFFER_HEIGHT - 1,
+                i
+            );
+        }
+
+        let actual = buffer.chars[BUFFER_HEIGHT - 1][0].ascii_character as char;
+        assert_eq!('x', actual);
+    }
 }
