@@ -4,22 +4,17 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-#[cfg(test)]
-use core::ops::Fn;
-#[cfg(test)]
-use core::panic::PanicInfo;
-
-#[cfg(test)]
 pub mod qemu_exit;
 pub mod serial;
 pub mod vga_buffer;
 
-#[cfg(test)]
+use core::ops::Fn;
+use core::panic::PanicInfo;
+
 pub trait Testable {
     fn run(&self) -> ();
 }
 
-#[cfg(test)]
 impl<T> Testable for T
 where
     T: Fn(),
@@ -31,13 +26,19 @@ where
     }
 }
 
-#[cfg(test)]
 pub fn test_runner(tests: &[&dyn Testable]) {
     serial_println!("Running {} tests", tests.len());
     for test in tests {
         test.run();
     }
     qemu_exit::exit_qemu(qemu_exit::QemuExitCode::Success);
+}
+
+pub fn test_panic_handler(info: &PanicInfo) -> ! {
+    serial_println!("[failed]\n");
+    serial_println!("Error: {}\n", info);
+    qemu_exit::exit_qemu(qemu_exit::QemuExitCode::Failed);
+    loop {}
 }
 
 #[cfg(test)]
@@ -51,8 +52,5 @@ pub extern "C" fn _start() -> ! {
 #[cfg(test)]
 #[panic_handler]
 pub fn panic(info: &PanicInfo) -> ! {
-    serial_println!("[failed]\n");
-    serial_println!("Error: {}\n", info);
-    qemu_exit::exit_qemu(qemu_exit::QemuExitCode::Failed);
-    loop {}
+    test_panic_handler(info)
 }
