@@ -5,7 +5,8 @@ macro_rules! should_panic_test {
         #[unsafe(no_mangle)]
         pub extern "C" fn _start() -> ! {
             rust_os::serial_print!("{}...\t", core::any::type_name_of_val(&$test_fn));
-            rust_os::interupt::INTERUPT_DESCRIPTOR_TABLE.load();
+            rust_os::interupt::init();
+            rust_os::gdt::init();
 
             $test_fn();
 

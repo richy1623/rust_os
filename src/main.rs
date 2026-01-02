@@ -9,7 +9,8 @@ use rust_os::*;
 #[cfg(not(test))]
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
-    rust_os::interupt::INTERUPT_DESCRIPTOR_TABLE.load();
+    rust_os::interupt::init();
+    rust_os::gdt::init();
     print!("Hello Richard!");
     loop {}
 }

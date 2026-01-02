@@ -1,1 +1,4 @@
-words = ["idt"]
+words = [
+    "idt",
+    "tss",
+]

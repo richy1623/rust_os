@@ -5,10 +5,16 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+pub mod gdt;
 pub mod interupt;
 pub mod qemu_exit;
 pub mod serial;
 pub mod vga_buffer;
+
+pub fn init() {
+    gdt::init();
+    interupt::init();
+}
 
 use core::ops::Fn;
 use core::panic::PanicInfo;
@@ -46,7 +52,8 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
 #[cfg(test)]
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
-    interupt::INTERUPT_DESCRIPTOR_TABLE.load();
+    interupt::init();
+    gdt::init();
     test_main();
 
     loop {}
