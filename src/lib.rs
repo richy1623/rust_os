@@ -1,9 +1,11 @@
 #![no_std]
 #![cfg_attr(test, no_main)]
 #![feature(custom_test_frameworks)]
+#![feature(abi_x86_interrupt)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+pub mod interupt;
 pub mod qemu_exit;
 pub mod serial;
 pub mod vga_buffer;
@@ -44,6 +46,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
 #[cfg(test)]
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
+    interupt::INTERUPT_DESCRIPTOR_TABLE.load();
     test_main();
 
     loop {}

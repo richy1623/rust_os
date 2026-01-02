@@ -25,3 +25,10 @@ test-args = [
     "none",
 ]
 test-success-exit-code = 33 # (0x10 << 1) | 1
+test-timeout = 30 # (in seconds)
+
+##### Tests #####
+[[test]]
+name = "double_fault"
+path = "tests/interupt/double_fault.rs"
+harness = false

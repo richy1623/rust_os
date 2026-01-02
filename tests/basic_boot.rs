@@ -11,6 +11,7 @@ use rust_os::println;
 fn test_println() {
     println!("test_println output");
 }
+
 #[cfg(test)]
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
