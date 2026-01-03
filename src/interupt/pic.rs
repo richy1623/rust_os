@@ -6,7 +6,7 @@ use x86_64::{
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame},
 };
 
-use crate::{print, println};
+use crate::print;
 
 pub const PIC_1_OFFSET: u8 = 32;
 pub const PIC_2_OFFSET: u8 = PIC_1_OFFSET + 8;
@@ -42,8 +42,6 @@ pub static KEYBOARD: Lazy<
 });
 
 pub extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    // print!(".");
-
     unsafe {
         PROGRAMMABLE_INTERRUPT_CONTROLLER
             .lock()
