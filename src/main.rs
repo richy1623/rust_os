@@ -9,15 +9,18 @@ use rust_os::*;
 #[cfg(not(test))]
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
-    rust_os::interupt::init();
-    rust_os::gdt::init();
+    rust_os::init();
     print!("Hello Richard!");
-    loop {}
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
 
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     print!("\n{}", info);
-    loop {}
+    loop {
+        x86_64::instructions::hlt();
+    }
 }

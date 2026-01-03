@@ -15,10 +15,11 @@ fn test_println() {
 #[cfg(test)]
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
-    rust_os::interupt::init();
-    rust_os::gdt::init();
+    rust_os::init();
     test_main();
-    loop {}
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
 
 #[cfg(test)]

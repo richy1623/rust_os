@@ -6,6 +6,7 @@ authors = ["Richard Paterson <richy1623@gmail.com>"]
 
 [dependencies]
 bootloader = "0.9"
+pic8259 = "0.11.0"
 spin = { version = "0.10.0", features = ["lazy"] }
 uart_16550 = "0.4.0"
 x86_64 = "0.15.4"

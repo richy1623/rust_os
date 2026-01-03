@@ -179,7 +179,8 @@ macro_rules! println {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
-    VGA_WRITER.lock().write_fmt(args).unwrap();
+    use x86_64::instructions::interrupts;
+    interrupts::without_interrupts(|| VGA_WRITER.lock().write_fmt(args).unwrap());
 }
 
 #[cfg(test)]
@@ -190,6 +191,8 @@ mod test {
 
     #[test_case]
     fn test_vga_write() {
+        let interrupts_are_enabled = x86_64::instructions::interrupts::are_enabled();
+        x86_64::instructions::interrupts::disable();
         VGA_WRITER.lock().clear();
         let string_to_write = "Hello World!";
         VGA_WRITER.lock().write_string(string_to_write);
@@ -200,10 +203,15 @@ mod test {
             let actual = buffer.chars[BUFFER_HEIGHT - 1][i].ascii_character as char;
             assert_eq!(*expected as char, actual);
         }
+        if interrupts_are_enabled {
+            x86_64::instructions::interrupts::enable();
+        }
     }
 
     #[test_case]
     fn test_vga_write_new_line() {
+        let interrupts_are_enabled = x86_64::instructions::interrupts::are_enabled();
+        x86_64::instructions::interrupts::disable();
         VGA_WRITER.lock().clear();
         let string_to_write = "HelloWorld\n!";
         VGA_WRITER.lock().write_string(string_to_write);
@@ -218,10 +226,15 @@ mod test {
             let actual = buffer.chars[BUFFER_HEIGHT - 1][i].ascii_character as char;
             assert_eq!(*expected as char, actual);
         }
+        if interrupts_are_enabled {
+            x86_64::instructions::interrupts::enable();
+        }
     }
 
     #[test_case]
     fn test_vga_write_long_line() {
+        let interrupts_are_enabled = x86_64::instructions::interrupts::are_enabled();
+        x86_64::instructions::interrupts::disable();
         VGA_WRITER.lock().clear();
         let string_to_write: [u8; BUFFER_WIDTH * 2] = [b'x'; BUFFER_WIDTH * 2];
         for char in string_to_write {
@@ -248,5 +261,8 @@ mod test {
 
         let actual = buffer.chars[BUFFER_HEIGHT - 1][0].ascii_character as char;
         assert_eq!('x', actual);
+        if interrupts_are_enabled {
+            x86_64::instructions::interrupts::enable();
+        }
     }
 }

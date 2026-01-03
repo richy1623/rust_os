@@ -3,6 +3,8 @@ use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
 use crate::{gdt, println};
 
+pub mod pic;
+
 pub static INTERUPT_DESCRIPTOR_TABLE: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
     let mut interrupt_descriptor_table = InterruptDescriptorTable::new();
     interrupt_descriptor_table
@@ -14,6 +16,8 @@ pub static INTERUPT_DESCRIPTOR_TABLE: Lazy<InterruptDescriptorTable> = Lazy::new
             .set_handler_fn(double_fault_handler)
             .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX)
     };
+
+    pic::set_pic_handlers(&mut interrupt_descriptor_table);
 
     interrupt_descriptor_table
 });

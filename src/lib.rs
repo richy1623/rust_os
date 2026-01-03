@@ -14,6 +14,12 @@ pub mod vga_buffer;
 pub fn init() {
     gdt::init();
     interupt::init();
+    unsafe {
+        interupt::pic::PROGRAMMABLE_INTERRUPT_CONTROLLER
+            .lock()
+            .initialize()
+    };
+    x86_64::instructions::interrupts::enable();
 }
 
 use core::ops::Fn;
@@ -46,17 +52,20 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
     qemu_exit::exit_qemu(qemu_exit::QemuExitCode::Failed);
-    loop {}
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
 
 #[cfg(test)]
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
-    interupt::init();
-    gdt::init();
+    init();
     test_main();
 
-    loop {}
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
 
 #[cfg(test)]
