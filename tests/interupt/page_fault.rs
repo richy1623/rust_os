@@ -7,9 +7,9 @@ mod common;
 
 use rust_os;
 
-should_panic_test!(double_fault);
+should_run_test!(page_fault);
 
-fn double_fault() {
+fn page_fault() {
     unsafe {
         *(0xdeadbeef as *mut u8) = 42;
     };

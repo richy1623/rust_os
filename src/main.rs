@@ -10,16 +10,12 @@ use rust_os::*;
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     rust_os::init();
-    loop {
-        x86_64::instructions::hlt();
-    }
+    hlt_loop();
 }
 
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     print!("\n{}", info);
-    loop {
-        x86_64::instructions::hlt();
-    }
+    hlt_loop();
 }

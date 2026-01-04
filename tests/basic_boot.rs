@@ -17,9 +17,7 @@ fn test_println() {
 pub extern "C" fn _start() -> ! {
     rust_os::init();
     test_main();
-    loop {
-        x86_64::instructions::hlt();
-    }
+    rust_os::hlt_loop();
 }
 
 #[cfg(test)]

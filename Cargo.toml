@@ -31,8 +31,8 @@ test-timeout = 30 # (in seconds)
 
 ##### Tests #####
 [[test]]
-name = "double_fault"
-path = "tests/interupt/double_fault.rs"
+name = "page_fault"
+path = "tests/interupt/page_fault.rs"
 harness = false
 [[test]]
 name = "stack_overflow"

@@ -10,18 +10,39 @@ macro_rules! should_panic_test {
 
             rust_os::serial_println!("[test did not panic]");
             rust_os::qemu_exit::exit_qemu(rust_os::qemu_exit::QemuExitCode::Failed);
-            loop {
-                x86_64::instructions::hlt();
-            }
+            rust_os::hlt_loop();
         }
 
         #[panic_handler]
         fn panic(_info: &core::panic::PanicInfo) -> ! {
             rust_os::serial_println!("[ok]");
             rust_os::qemu_exit::exit_qemu(rust_os::qemu_exit::QemuExitCode::Success);
-            loop {
-                x86_64::instructions::hlt();
-            }
+            rust_os::hlt_loop();
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! should_run_test {
+    ($test_fn:expr) => {
+        #[unsafe(no_mangle)]
+        pub extern "C" fn _start() -> ! {
+            rust_os::serial_print!("{}...\t", core::any::type_name_of_val(&$test_fn));
+            rust_os::init();
+
+            $test_fn();
+
+            rust_os::serial_println!("[ok]");
+            rust_os::qemu_exit::exit_qemu(rust_os::qemu_exit::QemuExitCode::Success);
+            rust_os::hlt_loop();
+        }
+
+        #[panic_handler]
+        fn panic(info: &core::panic::PanicInfo) -> ! {
+            rust_os::serial_println!("[failed]\n");
+            rust_os::serial_println!("Error: {}\n", info);
+            rust_os::qemu_exit::exit_qemu(rust_os::qemu_exit::QemuExitCode::Failed);
+            rust_os::hlt_loop();
         }
     };
 }
